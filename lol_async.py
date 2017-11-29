@@ -1,7 +1,9 @@
 import asyncio
 import concurrent.futures
 import json
+import time
 from collections import Counter
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
@@ -13,9 +15,15 @@ def get_count_of_matches(player_id):
     params = urlencode({
         'begIndex': 99999
     })
-    response = urlopen(base + params).read()
-    data = json.loads(response, encoding='utf8')
-    return data['games']['gameIndexBegin']
+    try:
+        response = urlopen(base + params).read()
+        data = json.loads(response, encoding='utf8')
+        return data['games']['gameIndexBegin']
+    except HTTPError as e:
+        if e.code == 429:
+            time.sleep(0.1)
+            return get_count_of_matches(player_id)
+
 
 
 def get_match_history(player_id, begin_index=0):
@@ -23,8 +31,13 @@ def get_match_history(player_id, begin_index=0):
     params = urlencode({
         'begIndex': begin_index
     })
-    response = urlopen(base + params).read()
-    return json.loads(response, encoding='utf8')
+    try:
+        response = urlopen(base + params).read()
+        return json.loads(response, encoding='utf8')
+    except HTTPError as e:
+        if e.code == 429:
+            time.sleep(0.1)
+            return get_match_history(player_id, begin_index=begin_index)
 
 
 def process_response(response):
@@ -42,7 +55,7 @@ def count_champions(page):
 
 
 async def count_all_champions():
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         loop = asyncio.get_event_loop()
         futures = [
             loop.run_in_executor(executor, count_champions, page)
