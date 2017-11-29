@@ -1,11 +1,14 @@
 import asyncio
 import concurrent.futures
+import csv
 import json
 import time
 from collections import Counter
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import urlopen
+
+import champion
 
 champions = Counter()
 
@@ -70,4 +73,9 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.run_until_complete(count_all_champions())
 
-    print(champions.most_common(10))
+    with open('output.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+
+        for champ in champions.most_common():
+            print("{}: {}".format(champion.get_champion_name_for_id(champ[0]), champ[1]))
+            writer.writerow([champ[0], champ[1], champion.get_champion_name_for_id(champ[0])])
